@@ -8,6 +8,7 @@ interface Product {
   category: string;
   popular?: boolean;
   comingSoon?: boolean;
+  tebexPackageId?: number; // optional direct package link
 }
 
 function App() {
@@ -17,6 +18,11 @@ function App() {
   const [serverInfo, setServerInfo] = useState<any | null>(null);
   const discordInvite = 'https://discord.gg/MXDPQYMGUC';
   const [serverCopied, setServerCopied] = useState(false);
+  const tebexStoreUrl: string | undefined = (() => {
+    const raw = (import.meta as any)?.env?.VITE_TEBEX_STORE_URL as string | undefined;
+    if (!raw) return undefined;
+    return raw.replace(/^['"]|['"]$/g, '').trim();
+  })();
 
   const products: Product[] = [
     // VIP Access
@@ -38,6 +44,21 @@ function App() {
     { id: 'coins-14k', name: '14,000 WarCoins', price: '49.99 EUR', category: 'coins' },
   ];
 
+  // Build package ID mapping from env first, then optional hard-coded fallback map
+  const toEnvKey = (id: string) => id.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase();
+  const envPkgMap: Record<string, number> = {};
+  for (const p of products) {
+    const key = `VITE_TEBEX_PKG_${toEnvKey(p.id)}`;
+    const val = (import.meta as any)?.env?.[key];
+    const num = val ? Number(val) : NaN;
+    if (Number.isFinite(num) && num > 0) envPkgMap[p.id] = num as number;
+  }
+  // Optional static fallback map (leave empty unless you want code-based defaults)
+  const fallbackPkgMap: Record<string, number> = {
+    // 'vip-sub': 123456,
+  };
+  const tebexPackageMap: Record<string, number> = { ...fallbackPkgMap, ...envPkgMap };
+
   // featured products: popular ones first, then others; show up to 9
   const featuredProducts = [
     ...products.filter(p => p.popular && !p.comingSoon),
@@ -45,9 +66,17 @@ function App() {
   ].slice(0, 6);
 
   const addToCart = (_productId: string) => {
-    // placeholder: cart increment not needed in this view
-    // keep function to satisfy ProductCard button handlers
-    console.log('addToCart', _productId);
+    const product = products.find(p => p.id === _productId);
+    if (!product || product.comingSoon) return;
+
+    const pkgId = product.tebexPackageId ?? tebexPackageMap[_productId];
+    if (!tebexStoreUrl) {
+      alert('Store is not configured yet. Ask the admin to set VITE_TEBEX_STORE_URL in .env and restart.');
+      return;
+    }
+    const base = tebexStoreUrl.replace(/\/$/, '');
+    const url = pkgId ? `${base}/package/${pkgId}` : base;
+    window.location.href = url; // redirect in the same tab
   };
 
   const navigationItems = [
