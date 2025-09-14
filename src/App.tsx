@@ -19,9 +19,12 @@ function App() {
   const discordInvite = 'https://discord.gg/MXDPQYMGUC';
   const [serverCopied, setServerCopied] = useState(false);
   const tebexStoreUrl: string | undefined = (() => {
-    const raw = (import.meta as any)?.env?.VITE_TEBEX_STORE_URL as string | undefined;
-    if (!raw) return undefined;
-    return raw.replace(/^['"]|['"]$/g, '').trim();
+    const fromEnv = (import.meta as any)?.env?.VITE_TEBEX_STORE_URL as string | undefined;
+    const fromGlobal = (window as any)?.__APP_CONFIG__?.tebexStoreUrl as string | undefined;
+    const raw = fromEnv ?? fromGlobal;
+    if (typeof raw !== 'string') return undefined;
+    const cleaned = raw.replace(/^['"]+|['"]+$/g, '').trim();
+    return cleaned || undefined;
   })();
 
   const products: Product[] = [
@@ -71,7 +74,9 @@ function App() {
 
     const pkgId = product.tebexPackageId ?? tebexPackageMap[_productId];
     if (!tebexStoreUrl) {
-      alert('Store is not configured yet. Ask the admin to set VITE_TEBEX_STORE_URL in .env and restart.');
+      // As a last resort, try a sensible default for OutCraft
+      const fallback = 'https://outcraft.tebex.io';
+      window.location.href = pkgId ? `${fallback}/package/${pkgId}` : fallback;
       return;
     }
     const base = tebexStoreUrl.replace(/\/$/, '');
@@ -116,6 +121,7 @@ function App() {
   }, [currentSection]);
 
   const copyServerIp = async () => {
+    console.log('Copy IP clicked');
     try {
       await navigator.clipboard.writeText(serverIp);
       setServerCopied(true);
@@ -171,7 +177,7 @@ function App() {
   
 
   const ProductCard = ({ product }: { product: Product }) => (
-    <div className="bg-black/60 backdrop-blur-sm border border-purple-500/10 rounded-lg p-5 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+    <div className="bg-black/60 backdrop-blur-sm border border-purple-500/10 rounded-lg p-5 hover:shadow-lg transition-all duration-200 hover:-translate-y-1 animate-card">
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           {/* category icon */}
@@ -242,8 +248,10 @@ function App() {
             <div>
               <h2 className="text-3xl font-bold text-white mb-8 text-center">Featured Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
+                {featuredProducts.map((product, idx) => (
+                  <div key={product.id} style={{ ['--oc-delay' as any]: `${idx * 70}ms` } as any}>
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -296,8 +304,10 @@ function App() {
 
             {/* VIP Products */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {products.filter(p => p.category === 'vip' && !p.comingSoon).map(product => (
-                <ProductCard key={product.id} product={product} />
+              {products.filter(p => p.category === 'vip' && !p.comingSoon).map((product, idx) => (
+                <div key={product.id} style={{ ['--oc-delay' as any]: `${idx * 60}ms` } as any}>
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
 
@@ -322,8 +332,10 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {products.filter(p => p.category === 'ranks' && !p.comingSoon).map(product => (
-                <ProductCard key={product.id} product={product} />
+              {products.filter(p => p.category === 'ranks' && !p.comingSoon).map((product, idx) => (
+                <div key={product.id} style={{ ['--oc-delay' as any]: `${idx * 60}ms` } as any}>
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           </div>
@@ -338,8 +350,10 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.filter(p => p.category === 'coins' && !p.comingSoon).map(product => (
-                <ProductCard key={product.id} product={product} />
+              {products.filter(p => p.category === 'coins' && !p.comingSoon).map((product, idx) => (
+                <div key={product.id} style={{ ['--oc-delay' as any]: `${idx * 60}ms` } as any}>
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           </div>
@@ -383,13 +397,11 @@ function App() {
         <div className="relative w-full mt-36">
           <div className="container mx-auto px-4 relative">
             {/* server box aligned to container left */}
-            <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
-              <div
-                role="button"
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 animate-fade-in z-10" style={{ ['--oc-delay' as any]: '80ms' } as any}>
+              <button
+                type="button"
                 title="Click to Copy IP"
                 onClick={copyServerIp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') copyServerIp(); }}
-                tabIndex={0}
                 className="flex items-center space-x-3 bg-black/40 border border-purple-500/10 rounded-lg px-3 py-2 cursor-pointer hover:bg-black/60 transition-all duration-150"
               >
                 <div className="text-left">
@@ -410,16 +422,16 @@ function App() {
                 <div className="pl-4">
                   <Play className="h-6 w-6 text-purple-400" />
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* logo above navbar */}
-              <div className="mb-0">
+              <div className="mb-0 animate-logo" style={{ ['--oc-delay' as any]: '0ms' } as any}>
                 <img src="/Outcraft-logo.png" alt="Outcraft logo" className="h-60 mx-auto" />
               </div>
 
               {/* discord box aligned to container right */}
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 animate-fade-in" style={{ ['--oc-delay' as any]: '80ms' } as any}>
                 <div
                   role="button"
                   title="Click to open the invite link"
@@ -463,11 +475,12 @@ function App() {
                   key={item.id}
                   ref={el => (buttonRefs.current[idx] = el)}
                   onClick={() => setCurrentSection(item.id)}
-                  className={`relative z-10 flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                  className={`relative z-10 flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 animate-nav-item ${
                     currentSection === item.id
                       ? 'text-white'
                       : 'text-gray-300 hover:text-white'
                   }`}
+                  style={{ ['--oc-delay' as any]: `${60 + idx * 40}ms` } as any}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>

@@ -8,6 +8,11 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Optional runtime config: set window.__APP_CONFIG__.tebexStoreUrl if needed -->
+    <script>
+      window.__APP_CONFIG__ = window.__APP_CONFIG__ || {};
+      // window.__APP_CONFIG__.tebexStoreUrl = 'https://outcraft.tebex.io';
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
